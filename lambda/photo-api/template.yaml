@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Parameters:
+  PhotoAppBucketName:
+    Type: String
+  DeployBucketName:
+    Type: String
+
+Globals:
+  Api:
+    Cors: "'*'"
+
+Resources:
+  PhotoApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: 'prod'
+      DefinitionBody:
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: !Sub 's3://${DeployBucketName}/swagger.yaml'
+
+  PhotoListFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: photo-api
+      CodeUri: photo-api/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      Tracing: Active
+      MemorySize: 256
+      Timeout: 30
+      Role: <LambdaRolePhotoList>
+      Environment:
+        Variables:
+          BUCKET_NAME: !Sub ${PhotoAppBucketName}
+      Events:
+        GetAPI:
+          Type: Api
+          Properties:
+            Path: /photos/{username}
+            Method: GET
+            RestApiId: !Ref PhotoApi
+
+  PhotoListFunctionPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        'Fn::GetAtt':
+          - PhotoListFunction
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        'Fn::Sub': 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*/*'
+
+Outputs:
+  ApiUrl:
+    Description: URL of your API endpoint
+    Value: !Sub https://${PhotoApi}.execute-api.${AWS::Region}.amazonaws.com/prod

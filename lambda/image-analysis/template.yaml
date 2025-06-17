@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Resources:
+  ImageAnalysisFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: image-analysis
+      CodeUri: image-analysis/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      Tracing: Active
+      MemorySize: 256
+      Timeout: 30
+      Role: <LambdaRoleImageAnalysis>
